@@ -1,4 +1,9 @@
-import sys
+import sys, os
+# sys.path.append(os.path.dirname(os.path.realpath(__file__) + \
+#                 os.path.sep + os.path.pardir + \
+#                 os.path.sep + os.path.pardir))
+# this is specific the location of pypif, since I haven't
+# installed pypif
 sys.path.append('/Users/bkappes/src/citrine/pypif')
 from pypif import pif
 from alloy import AlloyBase
@@ -23,6 +28,8 @@ class Inconel718(AlloyBase):
         balance = {'low' : 100., 'high' : 100.}
         # at some point, allow the user to tweak the composition on an
         # element-by-element basis by passing something to the class
+        # alloy compositions are typically defined in weight/mass percent
+        # with one element set by "balance".
         composition = []
         for elem, (low, high) in (('Ni', (50., 55.)),
                                   ('Cr', (17., 21.)),

@@ -11,10 +11,13 @@ EXAMPLES
 
 from __future__ import division
 
-import sys
+import sys, os
+sys.path.append(os.path.dirname(os.path.realpath(__file__) + \
+                os.path.sep + os.path.pardir))
+# this is specific the location of pypif, since I haven't
+# installed pypif
 sys.path.append('/Users/bkappes/src/citrine/pypif')
-sys.path.append('..')
-import os, textwrap, traceback, argparse, re
+import textwrap, traceback, argparse, re
 import time
 import shutil
 import numpy as np

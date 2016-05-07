@@ -1,4 +1,7 @@
-import sys
+import sys, os
+# sys.path.append(os.path.dirname(os.path.realpath(__file__) + \
+#                 os.path.sep + os.path.pardir + \
+#                 os.path.sep + os.path.pardir))
 sys.path.append('/Users/bkappes/src/citrine/pypif')
 from copy import deepcopy
 from pypif import pif
@@ -72,10 +75,40 @@ class AlloyBase(pif.Alloy):
         prepstep.details = details
         self.preparation.append(prepstep)
     def anneal(self, Tstart, duration, **kwds):
+        """
+        Appends an annealing step to an alloy that holds temperature
+        at TSTART for DURATION.
+
+        Parameters
+        ----------
+        :Tstart, numeric: Start temperature, in Kelvin.
+        :duration, numeric: Duration of anneal, in hours.
+
+        Keywords
+        --------
+        :Tstop, numeric: Final temperature, in Kelvin. Default: Tstart.
+        :atmosphere, str: atmosphere in which the anneal occurs, e.g. 'Ar'
+        :description, str: Description of the annealing step.
+        """
         if 'description' not in kwds:
             kwds['description'] = 'anneal'
         self._thermal(Tstart, duration, **kwds)
     def cool(self, Tstart, duration=24, **kwds):
+        """
+        Appends an cooling step to an alloy that drops temperature
+        from TSTART to TSTOP (default: 273 K) over DURATION.
+
+        Parameters
+        ----------
+        :Tstart, numeric: Start temperature, in Kelvin.
+        :duration, numeric: Duration of anneal, in hours. Default: 24.
+
+        Keywords
+        --------
+        :Tstop, numeric: Final temperature, in Kelvin. Default: 273 K.
+        :atmosphere, str: atmosphere in which the cooling occurs, e.g. 'Ar'
+        :description, str: Description of the cooling step.
+        """
         if 'Tstop' not in kwds:
             kwds['Tstop'] = 273
         if 'description' not in kwds:
