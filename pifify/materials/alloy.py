@@ -47,14 +47,14 @@ class AlloyBase(pif.Alloy):
         if isinstance(duration, (int, float)):
             duration = pif.Value(name='duration',
                                  scalars=[pif.Scalar(duration)],
-                                 units=['hr'])
+                                 units='hr')
         assert(isinstance(duration, pif.Value))
         details.append(duration)
         #
         if isinstance(Tstart, (int, float)):
             Tstart = pif.Value(name='Tstart',
                                scalars=[pif.Scalar(Tstart)],
-                               units=['K'])
+                               units='K')
         assert(isinstance(Tstart, pif.Value))
         details.append(Tstart)
         #
@@ -64,7 +64,7 @@ class AlloyBase(pif.Alloy):
         elif isinstance(kwds['Tstop'], (int, float)):
             Tstop = pif.Value(name='Tstop',
                                scalars=[pif.Scalar(kwds['Tstop'])],
-                               units=['K'])
+                               units='K')
         else:
             Tstop = kwds['Tstop']
         assert(isinstance(Tstop, pif.Value))

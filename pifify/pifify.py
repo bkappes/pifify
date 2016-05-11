@@ -80,63 +80,63 @@ class FaustsonSample(pif.System):
         'innerSkinLaserPower' : lambda x : \
             pif.Property(name = 'inner skin laser power',
                          scalars = [pif.Scalar(x)],
-                         units = ['%']),
+                         units = '%'),
         'innerSkinLaserSpeed' : lambda x : \
             pif.Property(name = 'inner skin laser speed',
                          scalars = [pif.Scalar(x)],
-                         units = ['%']),
+                         units = '%'),
         'innerSkinLaserSpot' : lambda x : \
             pif.Property(name = 'inner skin laser spot',
                          scalars = [pif.Scalar(x)],
-                         units = ['$\mu$m']),
+                         units = '$\mu$m'),
         'innerSkinOverlap' : lambda x : \
             pif.Property(name = 'inner skin overlap',
                          scalars = [pif.Scalar(x)],
-                         units = ['mm']),
+                         units = 'mm'),
         'nlayers' : lambda x : pif.Scalar(x),
         'polar' : lambda x : \
             pif.Property(name = 'polar',
                          scalars = [pif.Scalar(x)],
-                         units = ['degrees']),
+                         units = 'degrees'),
         'powderSize' : lambda low, high : \
             pif.Property(name = 'powder size',
                          scalars = [pif.Scalar(minimum=low, maximum=high)],
-                         units=['$\mu$m']),
+                         units='$\mu$m'),
         'plate' : lambda x : pif.Scalar(x),
         'row' : lambda x : pif.Scalar(x),
         'sieveCount' : lambda x : pif.Scalar(x),
         'skinLaserPower' : lambda x : \
             pif.Property(name = 'skin laser power',
                          scalars = [pif.Scalar(x)],
-                         units = ['%']),
+                         units = '%'),
         'skinLaserSpeed' : lambda x : \
             pif.Property(name = 'skin laser speed',
                          scalars = [pif.Scalar(x)],
-                         units = ['%']),
+                         units = '%'),
         'skinLaserSpot' : lambda x : \
             pif.Property(name = 'skin laser spot',
                          scalars = [pif.Scalar(x)],
-                         units = ['$\mu$m']),
+                         units = '$\mu$m'),
         'skinOverlap' : lambda x : \
             pif.Property(name = 'skin overlap',
                          scalars = [pif.Scalar(x)],
-                         units = ['mm']),
+                         units = 'mm'),
         'azimuth' : lambda x : \
             pif.Value(name = 'azimuth',
                       scalars = [pif.Scalar(x)],
-                      units = ['degrees']),
+                      units = 'degrees'),
         'virgin' : lambda x : \
             pif.Value(name = 'virgin powder',
                       scalars = [pif.Scalar(x)],
-                      units = ['%']),
+                      units = '%'),
         'RD' : lambda x : \
             pif.Value(name = 'rolling direction',
                       scalars = [pif.Scalar(x)],
-                      units = ['mm']),
+                      units = 'mm'),
         'TD' : lambda x : \
             pif.Value(name = 'transverse direction',
                       scalars = [pif.Scalar(x)],
-                      units = ['mm'])
+                      units = 'mm')
     }
     def __init__(self, *args, **kwds):
         super(FaustsonSample, self).__init__(*args, **kwds)
