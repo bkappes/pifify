@@ -40,20 +40,20 @@ class AlloyBase(pif.Alloy):
         details = []
         if 'atmosphere' in kwds:
             if isinstance(kwds['atmosphere'], str):
-                atmosphere = pif.Property(name='atmosphere',
-                                          condition='Ar')
+                atmosphere = pif.Value(name='atmosphere',
+                                       scalars='Ar')
                 details.append(atmosphere)
         #
         if isinstance(duration, (int, float)):
             duration = pif.Value(name='duration',
-                                 scalars=[pif.Scalar(duration)],
+                                 scalars=duration,
                                  units='hr')
         assert(isinstance(duration, pif.Value))
         details.append(duration)
         #
         if isinstance(Tstart, (int, float)):
             Tstart = pif.Value(name='Tstart',
-                               scalars=[pif.Scalar(Tstart)],
+                               scalars=Tstart,
                                units='K')
         assert(isinstance(Tstart, pif.Value))
         details.append(Tstart)
@@ -61,9 +61,9 @@ class AlloyBase(pif.Alloy):
         if 'Tstop' not in kwds:
             Tstop = deepcopy(Tstart)
             Tstop.name = 'Tstop'
-        elif isinstance(kwds['Tstop'], (int, float)):
+        elif isinstance(kwds['Tstop'], (int, float, str)):
             Tstop = pif.Value(name='Tstop',
-                               scalars=[pif.Scalar(kwds['Tstop'])],
+                               scalars=kwds['Tstop'],
                                units='K')
         else:
             Tstop = kwds['Tstop']

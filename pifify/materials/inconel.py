@@ -48,7 +48,8 @@ class Inconel718(AlloyBase):
             balance['low']  -= high
             balance['high'] -= low
             component = pif.Composition(element=elem,
-                ideal_weight_percent=pif.Scalar(minimum=low, maximum=high))
+                ideal_weight_percent=pif.Scalar(minimum=low,
+                                                maximum=high))
             composition.append(component)
         assert(balance['low'] >= 0.0)
         assert(balance['high'] >= 0.0)

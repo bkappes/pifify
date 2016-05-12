@@ -66,6 +66,27 @@ class SampleMeta(type):
         super(cls, inst).__setattr__(attr, value)
 #end 'class SampleMeta(type):'
 
+def property_factory(name, **kwds):
+    """
+    Property factory
+
+    Returns a function that accepts a single scalar value and returns
+    a named pif.Property object.
+
+    Arguments
+    ---------
+    :name, str: Name of the property
+
+    Keywords
+    --------
+    All keywords are passed into pif.Property.
+    """
+    kwds['name'] = name
+    def func(x):
+        kwds['scalars'] = x
+        return pif.Property(**kwds)
+    return func
+
 class FaustsonSample(pif.System):
     __metaclass__ = SampleMeta # use the SampleMeta API
     # Properties relevant to the samples produced at Faustson. This stores a
@@ -73,70 +94,52 @@ class FaustsonSample(pif.System):
     #   property : conversion
     # entries. *conversion* takes one or more arguments and returns the
     # appropriate type for *property*.
+
     _props = {
-        'annealed' : lambda x : pif.Scalar(x),
-        'build' : lambda x : pif.Scalar(x),
-        'column' : lambda x : pif.Scalar(x),
-        'innerSkinLaserPower' : lambda x : \
-            pif.Property(name = 'inner skin laser power',
-                         scalars = [pif.Scalar(x)],
-                         units = '%'),
-        'innerSkinLaserSpeed' : lambda x : \
-            pif.Property(name = 'inner skin laser speed',
-                         scalars = [pif.Scalar(x)],
-                         units = '%'),
-        'innerSkinLaserSpot' : lambda x : \
-            pif.Property(name = 'inner skin laser spot',
-                         scalars = [pif.Scalar(x)],
-                         units = '$\mu$m'),
-        'innerSkinOverlap' : lambda x : \
-            pif.Property(name = 'inner skin overlap',
-                         scalars = [pif.Scalar(x)],
-                         units = 'mm'),
-        'nlayers' : lambda x : pif.Scalar(x),
-        'polar' : lambda x : \
-            pif.Property(name = 'polar',
-                         scalars = [pif.Scalar(x)],
-                         units = 'degrees'),
+        'annealed' : \
+            property_factory('annealed'),
+        'build' : \
+            property_factory('build'),
+        'column' : \
+            property_factory('column'),
+        'innerSkinLaserPower' : \
+            property_factory('inner skin laser power', units='%'),
+        'innerSkinLaserSpeed' : \
+            property_factory('inner skin laser speed', units='%'),
+        'innerSkinLaserSpot' : \
+            property_factory('inner skin laser spot', units='$\mu$m'),
+        'innerSkinOverlap' : \
+            property_factory('inner skin overlap', units='mm'),
+        'nlayers' : \
+            property_factory('number of layers'),
+        'polar' : \
+            property_factory('polar angle', units='degrees'),
         'powderSize' : lambda low, high : \
             pif.Property(name = 'powder size',
-                         scalars = [pif.Scalar(minimum=low, maximum=high)],
+                         scalars = pif.Scalar(minimum=low, maximum=high),
                          units='$\mu$m'),
-        'plate' : lambda x : pif.Scalar(x),
-        'row' : lambda x : pif.Scalar(x),
-        'sieveCount' : lambda x : pif.Scalar(x),
-        'skinLaserPower' : lambda x : \
-            pif.Property(name = 'skin laser power',
-                         scalars = [pif.Scalar(x)],
-                         units = '%'),
-        'skinLaserSpeed' : lambda x : \
-            pif.Property(name = 'skin laser speed',
-                         scalars = [pif.Scalar(x)],
-                         units = '%'),
-        'skinLaserSpot' : lambda x : \
-            pif.Property(name = 'skin laser spot',
-                         scalars = [pif.Scalar(x)],
-                         units = '$\mu$m'),
-        'skinOverlap' : lambda x : \
-            pif.Property(name = 'skin overlap',
-                         scalars = [pif.Scalar(x)],
-                         units = 'mm'),
-        'azimuth' : lambda x : \
-            pif.Value(name = 'azimuth',
-                      scalars = [pif.Scalar(x)],
-                      units = 'degrees'),
-        'virgin' : lambda x : \
-            pif.Value(name = 'virgin powder',
-                      scalars = [pif.Scalar(x)],
-                      units = '%'),
-        'RD' : lambda x : \
-            pif.Value(name = 'rolling direction',
-                      scalars = [pif.Scalar(x)],
-                      units = 'mm'),
-        'TD' : lambda x : \
-            pif.Value(name = 'transverse direction',
-                      scalars = [pif.Scalar(x)],
-                      units = 'mm')
+        'plate' : \
+            property_factory('plate number'),
+        'row' : \
+            property_factory('row'),
+        'sieveCount' : \
+            property_factory('sieve count'),
+        'skinLaserPower' : \
+            property_factory('skin laser power', units='%'),
+        'skinLaserSpeed' : \
+            property_factory('skin laser speed', units='%'),
+        'skinLaserSpot' : \
+            property_factory('skin laser spot', units='$\mu$m'),
+        'skinOverlap' : \
+            property_factory('skin overlap', units='mm'),
+        'azimuth' : \
+            property_factory('azimuth angle', units='degrees'),
+        'virgin' : \
+            property_factory('virgin powder', units='%'),
+        'RD' : \
+            property_factory('blade direction', units='mm'),
+        'TD' : \
+            property_factory('transverse direction', units='mm')
     }
     def __init__(self, *args, **kwds):
         super(FaustsonSample, self).__init__(*args, **kwds)
@@ -190,8 +193,7 @@ def main ():
     ofile, ext = os.path.splitext(ofile)
     ofile = '{}.pif'.format(ofile)
     with open(ofile, 'w') as ofs:
-        for s in samples:
-            ofs.write(str(s.as_pif_dictionary()))
+        pif.dump(samples, ofs)
 #end 'def main ():'
 
 if __name__ == '__main__':
