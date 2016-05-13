@@ -1,4 +1,7 @@
 *.pyc
 *.csv
 *.pif
+*.json
 *.zip
+*.tgz
+*.png

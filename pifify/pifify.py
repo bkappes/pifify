@@ -43,34 +43,56 @@ class SampleMeta(type):
     def __new__(cls, name, parents, dct):
         dct['__getattr__'] = SampleMeta.getattr
         dct['__setattr__'] = SampleMeta.setattr
+        dct['__contains__'] = SampleMeta.contains
         return super(SampleMeta, cls).__new__(cls, name, parents, dct)
+
+    @staticmethod
+    def attribute_generator(cls, name, rval):
+        """Creates a new attribute for type CLS"""
+        if not hasattr(cls, name):
+            setattr(cls, name, lambda instance: rval)
+
+    @staticmethod
+    def contains(inst, key):
+        cls = type(inst)
+        return (key in cls._props)
 
     @staticmethod
     def getattr(inst, key):
         cls = type(inst)
-        if key in cls._props:
-            attr = '_{}'.format(key)
-            return inst.__dict__.get(attr, None)
-        else:
-            return inst.__dict__[key]
+        if key in cls._props and not hasattr(cls, key):
+            return None
+        return super(cls, inst).__getattr__(key)
 
     @staticmethod
     def setattr(inst, key, *args):
         cls = type(inst)
         if key in cls._props:
-            attr = '_{}'.format(key)
+            # set the value
             value = cls._props[key](*args)
+            # add the properties to the sample properties list
+            try:
+                inst.properties.append(value)
+            except AttributeError:
+                inst.properties = []
+                inst.properties.append(value)
+            # store convenient access to this property
+            # if more than one property is given the same name, then only
+            # the most recent will retain programmatic access through the
+            # attribute. However, both will be stored in the properties
+            # field
+            SampleMeta.attribute_generator(cls, key, value)
         else:
             attr = key
             value = args[0]
-        super(cls, inst).__setattr__(attr, value)
+            super(cls, inst).__setattr__(attr, value)
 #end 'class SampleMeta(type):'
 
 def property_factory(name, **kwds):
     """
     Property factory
 
-    Returns a function that accepts a single scalar value and returns
+    Returns a function that accepts one or more scalar values and returns
     a named pif.Property object.
 
     Arguments
@@ -100,7 +122,7 @@ class FaustsonSample(pif.System):
             property_factory('annealed'),
         'build' : \
             property_factory('build'),
-        'column' : \
+        'col' : \
             property_factory('column'),
         'innerSkinLaserPower' : \
             property_factory('inner skin laser power', units='%'),
@@ -141,15 +163,20 @@ class FaustsonSample(pif.System):
         'TD' : \
             property_factory('transverse direction', units='mm')
     }
+
     def __init__(self, *args, **kwds):
         super(FaustsonSample, self).__init__(*args, **kwds)
-        self.alloy = Inconel718()
+        self.sub_systems = [Inconel718()]
         self.instrument = pif.Instrument(
             name='Faustson M2',
             model='M2 Cusing',
             producer='ConceptLaser',
             url='http://www.conceptlaserinc.com/machines/'
         )
+
+    @property
+    def alloy(self):
+        return self.sub_systems[0]
 #end 'class FaustsonSample(pif.System):'
 
 def file_kernel(ifile):
@@ -162,6 +189,9 @@ def file_kernel(ifile):
     for entry in csv:
         sample = FaustsonSample()
         for name in names:
+            if name not in sample:
+                msg = '{} is not a recognized field.'.format(name)
+                raise AttributeError(msg)
             # the annealing step is not stored in the CSV, just whether
             # or not this sample was annealed/heat treated. This could
             # be extended trivially (though cryptically) by replacing the
@@ -191,7 +221,7 @@ def main ():
     # write
     path, ofile = os.path.split(ifile)
     ofile, ext = os.path.splitext(ofile)
-    ofile = '{}.pif'.format(ofile)
+    ofile = '{}.json'.format(ofile)
     with open(ofile, 'w') as ofs:
         pif.dump(samples, ofs)
 #end 'def main ():'

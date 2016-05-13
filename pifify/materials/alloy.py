@@ -44,7 +44,7 @@ class AlloyBase(pif.Alloy):
                                        scalars='Ar')
                 details.append(atmosphere)
         #
-        if isinstance(duration, (int, float)):
+        if isinstance(duration, (int, float, str)):
             duration = pif.Value(name='duration',
                                  scalars=duration,
                                  units='hr')
@@ -52,7 +52,7 @@ class AlloyBase(pif.Alloy):
         details.append(duration)
         #
         if isinstance(Tstart, (int, float)):
-            Tstart = pif.Value(name='Tstart',
+            Tstart = pif.Value(name='Start temperature',
                                scalars=Tstart,
                                units='K')
         assert(isinstance(Tstart, pif.Value))
@@ -60,11 +60,11 @@ class AlloyBase(pif.Alloy):
         #
         if 'Tstop' not in kwds:
             Tstop = deepcopy(Tstart)
-            Tstop.name = 'Tstop'
+            Tstop.name = 'Stop temperature'
         elif isinstance(kwds['Tstop'], (int, float, str)):
-            Tstop = pif.Value(name='Tstop',
-                               scalars=kwds['Tstop'],
-                               units='K')
+            Tstop = pif.Value(name='Stop temperature',
+                              scalars=kwds['Tstop'],
+                              units='K')
         else:
             Tstop = kwds['Tstop']
         assert(isinstance(Tstop, pif.Value))
@@ -93,7 +93,7 @@ class AlloyBase(pif.Alloy):
         if 'description' not in kwds:
             kwds['description'] = 'anneal'
         self._thermal(Tstart, duration, **kwds)
-    def cool(self, Tstart, duration=24, **kwds):
+    def cool(self, Tstart, duration="as needed", **kwds):
         """
         Appends an cooling step to an alloy that drops temperature
         from TSTART to TSTOP (default: 273 K) over DURATION.
@@ -101,7 +101,8 @@ class AlloyBase(pif.Alloy):
         Parameters
         ----------
         :Tstart, numeric: Start temperature, in Kelvin.
-        :duration, numeric: Duration of anneal, in hours. Default: 24.
+        :duration, numeric or "as needed": Duration of anneal, in hours.
+            Default: "as needed".
 
         Keywords
         --------
