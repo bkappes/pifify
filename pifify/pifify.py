@@ -38,6 +38,7 @@ class SampleMeta(type):
 
     in any class that is to use this interface.
     """
+    _prep = {}
     _props = {}
 
     def __new__(cls, name, parents, dct):
@@ -55,27 +56,38 @@ class SampleMeta(type):
     @staticmethod
     def contains(inst, key):
         cls = type(inst)
-        return (key in cls._props)
+        return (key in cls._prep) or (key in cls._props)
 
     @staticmethod
     def getattr(inst, key):
         cls = type(inst)
-        if key in cls._props and not hasattr(cls, key):
+        haskey = ((key in cls._prep) or \
+                  (key in cls._props))
+        if haskey and not hasattr(cls, key):
             return None
         return super(cls, inst).__getattr__(key)
 
     @staticmethod
     def setattr(inst, key, *args):
         cls = type(inst)
-        if key in cls._props:
-            # set the value
-            value = cls._props[key](*args)
-            # add the properties to the sample properties list
-            try:
-                inst.properties.append(value)
-            except AttributeError:
+        # is the key in the preparation or properties dictionary?
+        if key in cls._prep:
+            dct = cls._prep
+            if not isinstance(inst.printing.details, list):
+                inst.printing.details = []
+            dest = inst.printing.details
+        elif key in cls._props:
+            dct = cls._props
+            if not isinstance(inst.properties, list):
                 inst.properties = []
-                inst.properties.append(value)
+            dest = inst.properties
+        else:
+            dct = None
+        if dct:
+            # set the value
+            value = dct[key](*args)
+            # add the properties to the sample properties list
+            dest.append(value)
             # store convenient access to this property
             # if more than one property is given the same name, then only
             # the most recent will retain programmatic access through the
@@ -87,6 +99,31 @@ class SampleMeta(type):
             value = args[0]
             super(cls, inst).__setattr__(attr, value)
 #end 'class SampleMeta(type):'
+
+
+def value_factory(name, **kwds):
+    """
+    Value factory
+
+    Returns a function that accepts one or more scalar values and returns
+    a named pif.Value object.
+
+    Arguments
+    ---------
+    :name, str: Name of the value
+
+    Keywords
+    --------
+    All keywords are passed into pif.Value.
+    """
+    kwds['name'] = name
+    def func(x):
+        kwds['scalars'] = x
+        return pif.Value(**kwds)
+    return func
+# preparation_factory is nothing more than a value_factory whose return
+# value is meant to be stored in a ProcessStep object
+preparation_factory = value_factory
 
 def property_factory(name, **kwds):
     """
@@ -117,66 +154,74 @@ class FaustsonSample(pif.System):
     # entries. *conversion* takes one or more arguments and returns the
     # appropriate type for *property*.
 
-    _props = {
+    _prep = {
         'annealed' : \
-            property_factory('annealed'),
+            preparation_factory('annealed'),
         'build' : \
-            property_factory('build'),
+            preparation_factory('build'),
         'col' : \
-            property_factory('column'),
+            preparation_factory('column'),
         'innerSkinLaserPower' : \
-            property_factory('inner skin laser power', units='%'),
+            preparation_factory('inner skin laser power', units='%'),
         'innerSkinLaserSpeed' : \
-            property_factory('inner skin laser speed', units='%'),
+            preparation_factory('inner skin laser speed', units='%'),
         'innerSkinLaserSpot' : \
-            property_factory('inner skin laser spot', units='$\mu$m'),
+            preparation_factory('inner skin laser spot', units='$\mu$m'),
         'innerSkinOverlap' : \
-            property_factory('inner skin overlap', units='mm'),
+            preparation_factory('inner skin overlap', units='mm'),
         'nlayers' : \
-            property_factory('number of layers'),
+            preparation_factory('number of layers'),
         'polar' : \
-            property_factory('polar angle', units='degrees'),
+            preparation_factory('polar angle', units='degrees'),
         'powderSize' : lambda low, high : \
             pif.Property(name = 'powder size',
                          scalars = pif.Scalar(minimum=low, maximum=high),
                          units='$\mu$m'),
         'plate' : \
-            property_factory('plate number'),
+            preparation_factory('plate number'),
         'row' : \
-            property_factory('row'),
+            preparation_factory('row'),
         'sieveCount' : \
-            property_factory('sieve count'),
+            preparation_factory('sieve count'),
         'skinLaserPower' : \
-            property_factory('skin laser power', units='%'),
+            preparation_factory('skin laser power', units='%'),
         'skinLaserSpeed' : \
-            property_factory('skin laser speed', units='%'),
+            preparation_factory('skin laser speed', units='%'),
         'skinLaserSpot' : \
-            property_factory('skin laser spot', units='$\mu$m'),
+            preparation_factory('skin laser spot', units='$\mu$m'),
         'skinOverlap' : \
-            property_factory('skin overlap', units='mm'),
+            preparation_factory('skin overlap', units='mm'),
         'azimuth' : \
-            property_factory('azimuth angle', units='degrees'),
+            preparation_factory('azimuth angle', units='degrees'),
         'virgin' : \
-            property_factory('virgin powder', units='%'),
+            preparation_factory('virgin powder', units='%'),
         'RD' : \
-            property_factory('blade direction', units='mm'),
+            preparation_factory('blade direction', units='mm'),
         'TD' : \
-            property_factory('transverse direction', units='mm')
+            preparation_factory('transverse direction', units='mm')
     }
 
     def __init__(self, *args, **kwds):
         super(FaustsonSample, self).__init__(*args, **kwds)
         self.sub_systems = [Inconel718()]
-        self.instrument = pif.Instrument(
-            name='Faustson M2',
-            model='M2 Cusing',
-            producer='ConceptLaser',
-            url='http://www.conceptlaserinc.com/machines/'
-        )
+        self.preparation = [pif.ProcessStep(
+            name='printing',
+            details=[],
+            instrument=[pif.Instrument(
+                name='Faustson M2',
+                model='M2 Cusing',
+                producer='ConceptLaser',
+                url='http://www.conceptlaserinc.com/machines/'
+            )]
+        )]
 
     @property
     def alloy(self):
         return self.sub_systems[0]
+
+    @property
+    def printing(self):
+        return self.preparation[0]
 #end 'class FaustsonSample(pif.System):'
 
 def file_kernel(ifile):
@@ -223,7 +268,7 @@ def main ():
     ofile, ext = os.path.splitext(ofile)
     ofile = '{}.json'.format(ofile)
     with open(ofile, 'w') as ofs:
-        pif.dump(samples, ofs)
+        pif.dump(samples, ofs, indent=4)
 #end 'def main ():'
 
 if __name__ == '__main__':
