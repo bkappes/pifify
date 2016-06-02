@@ -20,9 +20,14 @@ sys.path.append('/Users/bkappes/src/citrine/pypif')
 import textwrap, traceback, argparse, re
 import time
 import shutil
+import errno
+import tarfile
 import numpy as np
+from hashlib import md5 as hashfunc
+from uuid import UUID
 from pypif import pif
 from materials.inconel import Inconel718
+
 
 class SampleMeta(type):
     """
@@ -125,6 +130,7 @@ def value_factory(name, **kwds):
 # value is meant to be stored in a ProcessStep object
 preparation_factory = value_factory
 
+
 def property_factory(name, **kwds):
     """
     Property factory
@@ -145,6 +151,7 @@ def property_factory(name, **kwds):
         kwds['scalars'] = x
         return pif.Property(**kwds)
     return func
+
 
 class FaustsonSample(pif.System):
     __metaclass__ = SampleMeta # use the SampleMeta API
@@ -179,6 +186,8 @@ class FaustsonSample(pif.System):
                          units='$\mu$m'),
         'plate' : \
             preparation_factory('plate number'),
+        'plateMaterial' : \
+            preparation_factory('plate material'),
         'row' : \
             preparation_factory('row'),
         'sieveCount' : \
@@ -214,6 +223,10 @@ class FaustsonSample(pif.System):
                 url='http://www.conceptlaserinc.com/machines/'
             )]
         )]
+        #self.properties = [
+        #    pif.Property(..., category='materials'),
+        #    pif.Property(..., category='engineering')
+        #]
 
     @property
     def alloy(self):
@@ -224,7 +237,12 @@ class FaustsonSample(pif.System):
         return self.preparation[0]
 #end 'class FaustsonSample(pif.System):'
 
-def file_kernel(ifile):
+
+def csv_kernel(ifile):
+    # Process a single CSV file. Eventually this will need to be modified
+    # or renamed to be part-specific, e.g. Faustson samples vs. Lockheed
+    # samples, etc.
+    #
     # read CSV file
     csv = np.genfromtxt(ifile, delimiter=',', names=True, dtype=None)
     # get a list of column names
@@ -252,24 +270,102 @@ def file_kernel(ifile):
             else:
                 # all other attributes are stored.
                 setattr(sample, name, entry[name])
+                if name == 'plate':
+                    num = int(entry[name])
+                    if num in (1, 2, 3, 4):
+                        setattr(sample, 'plateMaterial', 'P20 steel')
         samples.append(sample)
-    print "Finished processing {} samples".format(len(samples))
+    #print "Finished processing {} samples".format(len(samples))
     return samples
-#end 'def file_kernel(ifile):'
+#end 'def csv_kernel(ifile):'
+
+
+def make_directory(name, retry=0):
+    """
+    Makes a directory named NAME. If this fails because the directory
+    already exists and RETRY > 0, then use a counter to create a
+    new directory that doesn't exist, up to RETRY times.
+    """
+    if retry > 0:
+        counter = 0
+        # zero pad the counter according to the max number of retries
+        fmt = '{}-{:0%d}' % (int(np.log10(retry)) + 1)
+    directory = name
+    while True:
+        try:
+            os.mkdir(directory)
+            return directory
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                # if error number is EACCES (permission denied), ENOSPC (no
+                # space on device), or EROFS (read-only file system), then fail
+                raise exc
+            elif retry > 0:
+                # error number is EEXIST (directory exists) and RETRY > 0
+                counter += 1
+                directory = fmt.format(name, counter)
+                if counter >= retry:
+                    msg = 'Exceeded the number of unique directory ' \
+                          'names to try.'
+                    raise IOError(msg)
+            else:
+                # error number is EEXIST and RETRY is False.
+                raise exc
+
 
 def main ():
     global args
     samples = []
-    # read each file
+    # ####################################
+    # read
+    # ####################################
     for ifile in args.filelist:
-        samples.extend(file_kernel(ifile))
+        samples.extend(csv_kernel(ifile))
+    # ####################################
     # write
-    path, ofile = os.path.split(ifile)
-    ofile, ext = os.path.splitext(ofile)
-    ofile = '{}.json'.format(ofile)
-    with open(ofile, 'w') as ofs:
-        pif.dump(samples, ofs, indent=4)
+    # ####################################
+    # To improve traceability of the samples and their history, each sample
+    # should be uploaded separately, i.e. as a separate file. So rather than
+    # storing these in a single file, create a directory -- whose name is based
+    # on the input file, store each sample as a separate file in that
+    # directory, then tar and zip the directory.
+    path, basename = os.path.split(ifile)
+    directory, junk = os.path.splitext(basename) # junk the extension
+    directory = make_directory(directory, retry=0)
+    ofiles = []
+    for sample in samples:
+        # generate JSON string
+        jstr = pif.dumps(sample, indent=4)
+        # hash the JSON string to create an URN
+        urn = UUID(hashfunc(jstr).hexdigest()).get_urn()
+        urn = urn.split(':')[-1]
+        # store this in the newly created directory
+        ofile = '{}/{}.json'.format(directory, urn)
+        # check if this file already exists
+        prev = [i for i,fname in enumerate(ofiles) if ofile == fname]
+        if len(prev) > 0:
+            curr = len(ofiles)+1
+            msg = 'Sample {} and sample {} are identical.'.format(prev[0], curr)
+            if not args.duplicate_error:
+                sys.stdout.write('WARNING: {} ' \
+                                 'Skipping sample {}.\n'.format(msg, curr))
+                continue
+            else:
+                msg = '{} To skip duplicates, invoke the ' \
+                      '--duplicate-warning flag.'.format(msg)
+                shutil.rmtree(directory)
+                raise IOError(msg)
+        ofiles.append(ofile)
+        # write the file
+        with open(ofile, 'w') as ofs:
+            ofs.write(jstr)
+    # tarball and gzip the new directory
+    tarball = '{}.tgz'.format(directory)
+    with tarfile.open(tarball, 'w:gz') as tar:
+        tar.add(directory)
+    shutil.rmtree(directory)
 #end 'def main ():'
+
 
 if __name__ == '__main__':
     try:
@@ -299,6 +395,15 @@ if __name__ == '__main__':
             #nargs=argparse.REMAINDER, # if there are
             help='Files to process.')
         # optional parameters
+        parser.add_argument('--duplicate-error',
+            dest='duplicate_error',
+            action='store_true',
+            default=True,
+            help='Stop processing if duplicate samples are found.')
+        parser.add_argument('--duplicate-warning',
+            dest='duplicate_error',
+            action='store_false',
+            help='Print a warning message and skip duplicate samples.')
         parser.add_argument('-v',
             '--verbose',
             action='count',
@@ -309,8 +414,8 @@ if __name__ == '__main__':
             version='%(prog)s 0.1')
         args = parser.parse_args()
         # check for correct number of positional parameters
-        #if len(args.filelist) < 1:
-            #parser.error('missing argument')
+        if len(args.filelist) < 1:
+            parser.error('missing argument')
         # timing
         if args.verbose > 0: print time.asctime()
         main()
@@ -323,7 +428,11 @@ if __name__ == '__main__':
             print 'TOTAL TIME: {0:02d}:{1:02d}:{2:06.3f}'.format(hh,mm,ss)
         sys.exit(0)
     except KeyboardInterrupt, e: # Ctrl-C
-        raise e
+        sys.stderr.write('Caught keyboard interrupt.\n')
+        sys.exit(1)
+    except IOError, e:
+        sys.stderr.write(e.message + '\n')
+        sys.exit(1)
     except SystemExit, e: # sys.exit()
         raise e
     except Exception, e:
