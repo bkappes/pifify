@@ -1,0 +1,72 @@
+Processing (replaces "General")
+    Part Geometry
+	polar angle
+	    Show in table
+	    Numeric filter
+	azimuth angle
+	    Show in table
+	    Numeric filter
+	grid (column)
+	    Show in table
+	    Text filter
+	grid (row)
+	    Show in table
+	    Numeric filter
+	coupon position (blade direction)
+	    Show in table
+	    Continuous Range filter
+	coupon position (transverse direction)
+	    Show in table
+	    Continuous Range filter
+    
+    Source Material
+        plate number
+	    Show in table
+	    Numeric filter
+	build number
+	    Show in table
+	    Numeric filter
+        plate material
+	    Show in table
+	    Text filter
+	powder size
+	    Show in table
+	    Continuous Range filter
+    	virgin powder
+	    Show in table
+	    Continuous Range filter
+    	sieve count
+	    Show in table
+	    Discrete Range filter
+
+    Printing Parameters
+        number of layers (Notice that, though recorded, not currently displayed)
+	inner skin laser power
+	    Show in table
+	    Continuous Range filter
+	inner skin laser speed
+	    Show in table
+	    Continuous Range filter
+	inner skin laser spot
+	    Show in table
+	    Continuous Range filter
+	inner skin overlap
+	    Show in table
+	    Continuous Range filter
+	skin laser power
+	    Show in table
+	    Continuous Range filter
+	skin laser speed
+	    Show in table
+	    Continuous Range filter
+	skin laser spot
+	    Show in table
+	    Continuous Range filter
+	skin overlap
+	    Show in table
+	    Continuous Range filter
+
+    Post Processing
+        annealed
+	    Show in table
+	    Boolean filter (i.e. value is True/False)
