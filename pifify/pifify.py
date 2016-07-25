@@ -313,6 +313,43 @@ def make_directory(name, retry=0):
                 raise exc
 
 
+def filename_from(key, directory='.', overwrite=False):
+    """
+    Makes a filename based on the hash of KEY.
+
+    Parameters
+    ----------
+    :key, str: String object on which to construct a UUID-based filename.
+
+    Keywords
+    --------
+    :directory, str: Directory in which to place the newly created file.
+        Default: '.'
+    :overwrite, bool: If True, then the existing file will be overwritten.
+        If False (default), then an error is raised.
+
+    Return
+    ------
+    The filename as a string.
+    """
+    # validate input
+    directory=directory.rstrip('/')
+    # hash the key to create a URN
+    urn = UUID(hashfunc(key).hexdigest()).get_urn()
+    urn = urn.split(':')[-1]
+    # store this in the newly created directory
+    ofile = '{}/{}.json'.format(directory, urn)
+    try:
+        _ = open(ofile)
+        if not overwrite:
+            raise ValueError()
+    except IOError:
+        pass
+    except ValueError:
+        raise IOError()
+    return ofile
+
+
 def main ():
     global args
     samples = []
@@ -332,38 +369,32 @@ def main ():
     path, basename = os.path.split(ifile)
     directory, junk = os.path.splitext(basename) # junk the extension
     directory = make_directory(directory, retry=0)
-    ofiles = []
     for sample in samples:
         # generate JSON string
         jstr = pif.dumps(sample, indent=4)
-        # hash the JSON string to create an URN
-        urn = UUID(hashfunc(jstr).hexdigest()).get_urn()
-        urn = urn.split(':')[-1]
-        # store this in the newly created directory
-        ofile = '{}/{}.json'.format(directory, urn)
-        # check if this file already exists
-        prev = [i for i,fname in enumerate(ofiles) if ofile == fname]
-        if len(prev) > 0:
-            curr = len(ofiles)+1
-            msg = 'Sample {} and sample {} are identical.'.format(prev[0], curr)
+        # create a filename from the contents of the record
+        try:
+            ofile = filename_from(jstr, directory=directory)
+        except IOError:
+            msg = 'Sample {} is duplicated.'.format(ofile)
             if not args.duplicate_error:
-                sys.stdout.write('WARNING: {} ' \
-                                 'Skipping sample {}.\n'.format(msg, curr))
+                sys.stdout.write('WARNING: {}' \
+                                 'Skipping.\n'.format(msg))
                 continue
             else:
-                msg = '{} To skip duplicates, invoke the ' \
+                msg = 'ERROR: {} To skip duplicates, invoke the ' \
                       '--duplicate-warning flag.'.format(msg)
                 shutil.rmtree(directory)
                 raise IOError(msg)
-        ofiles.append(ofile)
         # write the file
         with open(ofile, 'w') as ofs:
             ofs.write(jstr)
     # tarball and gzip the new directory
-    tarball = '{}.tgz'.format(directory)
-    with tarfile.open(tarball, 'w:gz') as tar:
-        tar.add(directory)
-    shutil.rmtree(directory)
+    if args.create_archive:
+        tarball = '{}.tgz'.format(directory)
+        with tarfile.open(tarball, 'w:gz') as tar:
+            tar.add(directory)
+        shutil.rmtree(directory)
 #end 'def main ():'
 
 
@@ -412,6 +443,12 @@ if __name__ == '__main__':
         parser.add_argument('--version',
             action='version',
             version='%(prog)s 0.1')
+        parser.add_argument('-z',
+            '--tgz',
+            dest='create_archive',
+            action='store_true',
+            default=False,
+            help='Create an archive of the resulting records using tar/gzip.')
         args = parser.parse_args()
         # check for correct number of positional parameters
         if len(args.filelist) < 1:
