@@ -313,6 +313,13 @@ def make_directory(name, retry=0):
                 raise exc
 
 
+def get_urn(key):
+    """Generate a unique identifier from the key."""
+    urn = UUID(hashfunc(key).hexdigest()).get_urn()
+    urn = urn.split(':')[-1]
+    return urn
+
+
 def filename_from(key, directory='.', overwrite=False):
     """
     Makes a filename based on the hash of KEY.
@@ -335,8 +342,7 @@ def filename_from(key, directory='.', overwrite=False):
     # validate input
     directory=directory.rstrip('/')
     # hash the key to create a URN
-    urn = UUID(hashfunc(key).hexdigest()).get_urn()
-    urn = urn.split(':')[-1]
+    urn = get_urn(key)
     # store this in the newly created directory
     ofile = '{}/{}.json'.format(directory, urn)
     try:
@@ -386,9 +392,12 @@ def main ():
                       '--duplicate-warning flag.'.format(msg)
                 shutil.rmtree(directory)
                 raise IOError(msg)
+        # Add the UID to the record
+        urn = get_urn(jstr)
+        sample.uid = urn
         # write the file
         with open(ofile, 'w') as ofs:
-            ofs.write(jstr)
+            pif.dump(sample, ofs)
     # tarball and gzip the new directory
     if args.create_archive:
         tarball = '{}.tgz'.format(directory)
