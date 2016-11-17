@@ -33,8 +33,9 @@ class SampleMeta(type):
     @staticmethod
     def attribute_generator(cls, name, rval):
         """Creates a new attribute for type CLS"""
-        if not hasattr(cls, name):
-            setattr(cls, name, lambda instance: rval)
+        if hasattr(cls, name):
+            delattr(cls, name)
+        setattr(cls, name, lambda instance: rval)
 
     @staticmethod
     def contains(inst, key):
@@ -66,21 +67,22 @@ class SampleMeta(type):
             dest = inst.properties
         else:
             dct = None
-        if dct:
+        if dct is not None:
             # set the value
             value = dct[key](*args)
+            # delete any older values, if one exists.
+            for i in reversed(range(len(dest))):
+                if dest[i].name == value.name:
+                    del dest[i]
             # add the properties to the sample properties list
             dest.append(value)
             # store convenient access to this property
-            # if more than one property is given the same name, then only
-            # the most recent will retain programmatic access through the
-            # attribute. However, both will be stored in the properties
-            # field
             SampleMeta.attribute_generator(cls, key, value)
         else:
             attr = key
-            value = args[0]
-            super(cls, inst).__setattr__(attr, value)
+            super(cls, inst).__setattr__(attr, *args)
+            #value = args[0]
+            #super(cls, inst).__setattr__(attr, value)
 #end 'class SampleMeta(type):'
 
 

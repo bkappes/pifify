@@ -1,5 +1,7 @@
 from ...samples import FaustsonSample
 from itertools import product
+import os
+import json
 
 
 class CylinderPlate2mmX4mm(object):
@@ -115,6 +117,7 @@ class P004B001(CylinderPlate2mmX4mm):
             setattr(sample, 'plate', 4)
             setattr(sample, 'build', 1)
             setattr(sample, 'virgin', 20.0)
+            setattr(sample, 'sieveCount', 2)
 #end 'class P004B001(CylinderPlate2mmX4mm)'
 
 
@@ -126,6 +129,7 @@ class P005B001(CylinderPlate2mmX4mm):
             setattr(sample, 'build', 1)
             setattr(sample, 'laserIndex', 1)
             setattr(sample, 'virgin', 20.0)
+            setattr(sample, 'sieveCount', 2)
 #end 'class P005B001(CylinderPlate2mmX4mm)'
 
 
@@ -137,4 +141,25 @@ class P006B001(CylinderPlate2mmX4mm):
             setattr(sample, 'build', 1)
             setattr(sample, 'laserIndex', 2)
             setattr(sample, 'virgin', 20.0)
+            setattr(sample, 'sieveCount', 2)
 #end 'class P006B001(CylinderPlate2mmX4mm)'
+
+
+class P005B002(CylinderPlate2mmX4mm):
+    def __init__(self, *args, **kwds):
+        super(P005B002, self).__init__(*args, **kwds)
+        path = os.path.dirname(os.path.realpath(__file__))
+        modfile = '{}/P005_B002-laser-settings.json'.format(path)
+        with open(modfile, 'r') as ifs:
+            modifications = json.load(ifs)
+            print modifications.keys()[:5]
+            print modifications['M16']
+        for sample in self:
+            setattr(sample, 'plate', 5)
+            setattr(sample, 'build', 2)
+            col = sample.col().scalars
+            row = sample.row().scalars
+            key = '{:s}{:02d}'.format(col, int(row))
+            for k,v in iter(modifications[key].items()):
+                setattr(sample, k, float(v))
+#end 'class P005B002(CylinderPlate2mmX4mm):'

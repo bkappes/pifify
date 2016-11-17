@@ -3,8 +3,11 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__) + \
                 os.path.sep + os.path.pardir))
 # this is specific the location of pypif, since I haven't
 # installed pypif
-sys.path.append('/Users/bkappes/src/citrine/pypif')
-from pypif import pif
+try:
+    from pypif import pif
+except ImportError:
+    sys.path.append('/Users/bkappes/src/citrine/pypif')
+    from pypif import pif
 from .base import SampleMeta, preparation_factory, property_factory
 from ..materials.inconel import Inconel718
 
@@ -24,7 +27,7 @@ class FaustsonSample(pif.System):
         'col' : \
             preparation_factory('column'),
         'laserIndex' : \
-            preparation_factory('laser ID')
+            preparation_factory('laser ID'),
         'innerSkinLaserPower' : \
             preparation_factory('inner skin laser power', units='%'),
         'innerSkinLaserSpeed' : \
@@ -36,10 +39,11 @@ class FaustsonSample(pif.System):
         'nlayers' : \
             preparation_factory('number of layers'),
         'polar' : \
-            preparation_factory('polar angle', units='degrees'),
-        'powderSize' : lambda low, high : \
+            preparation_factory('polar angle', units='${}^\circ$'),
+        'powderSize' : lambda lohi : \
             pif.Property(name = 'powder size',
-                         scalars = pif.Scalar(minimum=low, maximum=high),
+                         scalars = pif.Scalar(minimum=lohi[0],
+                                              maximum=lohi[1]),
                          units='$\mu$m'),
         'plate' : \
             preparation_factory('plate number'),
@@ -58,7 +62,7 @@ class FaustsonSample(pif.System):
         'skinOverlap' : \
             preparation_factory('skin overlap', units='mm'),
         'azimuth' : \
-            preparation_factory('azimuth angle', units='degrees'),
+            preparation_factory('azimuth angle', units='${}^\circ$'),
         'virgin' : \
             preparation_factory('virgin powder', units='%'),
         'RD' : \

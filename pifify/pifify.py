@@ -14,9 +14,6 @@ from __future__ import division
 import sys, os
 sys.path.append(os.path.dirname(os.path.realpath(__file__) + \
                 os.path.sep + os.path.pardir))
-# this is specific the location of pypif, since I haven't
-# installed pypif
-sys.path.append('/Users/bkappes/src/citrine/pypif')
 import textwrap, traceback, argparse, re
 import time
 import shutil
@@ -26,49 +23,13 @@ import numpy as np
 from hashlib import md5 as hashfunc
 from uuid import UUID
 from pypif import pif
-from samples import FaustsonSample
-
-
-def csv_kernel(ifile):
-    # Process a single CSV file. Eventually this will need to be modified
-    # or renamed to be part-specific, e.g. Faustson samples vs. Lockheed
-    # samples, etc.
-    #
-    # read CSV file
-    csv = np.genfromtxt(ifile, delimiter=',', names=True, dtype=None)
-    # get a list of column names
-    names = csv.dtype.names
-    # process samples
-    samples = []
-    for entry in csv:
-        sample = FaustsonSample()
-        for name in names:
-            if name not in sample:
-                msg = '{} is not a recognized field.'.format(name)
-                raise AttributeError(msg)
-            # the annealing step is not stored in the CSV, just whether
-            # or not this sample was annealed/heat treated. This could
-            # be extended trivially (though cryptically) by replacing the
-            # boolean with a scalar, e.g. 0 = no anneal, 1 = inconel
-            # 980 + 720 + 620, ...
-            if name == 'annealed':
-                if entry['annealed']:
-                    sample.alloy.anneal(1253, 1, description='solution anneal')
-                    sample.alloy.cool(1253, description='oven cool')
-                    sample.alloy.anneal(993, 8, description='aging-1')
-                    sample.alloy.cool(993, 2, Tstop=893, description='aging-2')
-                    sample.alloy.anneal(893, 8, description='aging-3')
-            else:
-                # all other attributes are stored.
-                setattr(sample, name, entry[name])
-                if name == 'plate':
-                    num = int(entry[name])
-                    if num in (1, 2, 3, 4):
-                        setattr(sample, 'plateMaterial', 'P20 steel')
-        samples.append(sample)
-    #print "Finished processing {} samples".format(len(samples))
-    return samples
-#end 'def csv_kernel(ifile):'
+from pifify.io.input.Faustson import (P001B001,
+                                      P002B001,
+                                      P003B001,
+                                      P004B001,
+                                      P005B001,
+                                      P005B002,
+                                      P006B001)
 
 
 def make_directory(name, retry=0):
@@ -153,18 +114,29 @@ def main ():
     # ####################################
     # read
     # ####################################
-    for ifile in args.filelist:
-        samples.extend(csv_kernel(ifile))
+    for source in args.sources:
+        try:
+            subset = {
+                'faustson-plate1-build1' : P001B001().samples,
+                'faustson-plate2-build1' : P002B001().samples,
+                'faustson-plate3-build1' : P003B001().samples,
+                'faustson-plate4-build1' : P004B001().samples,
+                'faustson-plate5-build1' : P005B001().samples,
+                'faustson-plate5-build2' : P005B002().samples,
+                'faustson-plate6-build1' : P006B001().samples
+            }[source.lower()]
+        except KeyError:
+            raise ValueError('{source:} is not a recognized source.'.format(
+                source=source))
+        samples.extend(subset)
     # ####################################
     # write
     # ####################################
     # To improve traceability of the samples and their history, each sample
     # should be uploaded separately, i.e. as a separate file. So rather than
-    # storing these in a single file, create a directory -- whose name is based
-    # on the input file, store each sample as a separate file in that
-    # directory, then tar and zip the directory.
-    path, basename = os.path.split(ifile)
-    directory, junk = os.path.splitext(basename) # junk the extension
+    # storing these in a single file, create a directory to store each sample
+    # as a separate file in that directory, then tar and zip the directory.
+    directory = args.output
     directory = make_directory(directory, retry=0)
     for sample in samples:
         # generate JSON string
@@ -219,12 +191,15 @@ if __name__ == '__main__':
                         or restrictions.
                         """))
         # positional parameters
-        parser.add_argument('filelist',
-            metavar='file',
+        parser.add_argument('sources',
             type=str,
             nargs='*', # if there are no other positional parameters
             #nargs=argparse.REMAINDER, # if there are
-            help='Files to process.')
+            help='List of what should be processed. Recognized keywords: ' \
+                 'faustson-plate1-build1, faustson-plate2-build1, ' \
+                 'faustson-plate3-build1, faustson-plate4-build1, ' \
+                 'faustson-plate5-build1, faustson-plate5-build2, ' \
+                 'faustson-plate6-build1.')
         # optional parameters
         parser.add_argument('--duplicate-error',
             dest='duplicate_error',
@@ -235,6 +210,10 @@ if __name__ == '__main__':
             dest='duplicate_error',
             action='store_false',
             help='Print a warning message and skip duplicate samples.')
+        parser.add_argument('-o',
+            '--output',
+            default='samples',
+            help='Specify the output directory to hold the resulting files.')
         parser.add_argument('-v',
             '--verbose',
             action='count',
@@ -251,7 +230,7 @@ if __name__ == '__main__':
             help='Create an archive of the resulting records using tar/gzip.')
         args = parser.parse_args()
         # check for correct number of positional parameters
-        if len(args.filelist) < 1:
+        if len(args.sources) < 1:
             parser.error('missing argument')
         # timing
         if args.verbose > 0: print time.asctime()
